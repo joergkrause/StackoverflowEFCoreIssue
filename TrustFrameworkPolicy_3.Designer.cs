@@ -114,6 +114,11 @@ public partial class SubJourney
     return 0;
   }
 
+  public override bool Equals(object obj)
+  {
+    return true;
+  }
+
 }
 
 public partial class OrchestrationStep
