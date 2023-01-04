@@ -171,7 +171,11 @@ Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving 
 
 #endregion
 
+// use this to test the db
+
 //context.Set<TrustFrameworkPolicy>().Add(trustFrameworkPolicy);
+
+// alternative experiment with change tracker manipulation
 
 context.ChangeTracker.TrackGraph(trustFrameworkPolicy, node =>
 {
@@ -192,7 +196,7 @@ context.ChangeTracker.TrackGraph(trustFrameworkPolicy, node =>
     }
     else
     {
-      //node.Entry.State = EntityState.Modified;
+      // do not add
     }
   }
   else
