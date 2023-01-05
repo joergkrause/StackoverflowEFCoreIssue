@@ -1,6 +1,8 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using System.Reflection;
+using System.Text.Json.Serialization;
 using Trustme.MigrationConsole;
 
 Console.WriteLine("Test DB Schema");
@@ -171,40 +173,58 @@ Microsoft.EntityFrameworkCore.DbUpdateException: An error occurred while saving 
 
 #endregion
 
-// use this to test the db
+// final solution - use the same key for both entities
 
-//context.Set<TrustFrameworkPolicy>().Add(trustFrameworkPolicy);
+var serialized = JsonConvert.SerializeObject(
+    trustFrameworkPolicy,
+    new JsonSerializerSettings
+    {
+      ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+      PreserveReferencesHandling = PreserveReferencesHandling.All,
+      TypeNameHandling = TypeNameHandling.Auto,
+      ReferenceResolver = new SubJourneyResolver()
+    });
 
-// alternative experiment with change tracker manipulation
-
-context.ChangeTracker.TrackGraph(trustFrameworkPolicy, node =>
+var deserialized = JsonConvert.DeserializeObject<TrustFrameworkPolicy>(serialized, new JsonSerializerSettings
 {
-  //Console.WriteLine($"***** Tracking  {node.Entry.Entity.GetType().Name}");
-  if (node.Entry.Entity is SubJourney subJourney)
-  {    
-    var keyValue = node.Entry.Property(nameof(SubJourney.Id)).CurrentValue;
-    Console.WriteLine($"*** Recognized Subjourney *** {keyValue}");
-    var entityType = node.Entry.Metadata;
-
-    var existingEntity = node.Entry.Context.ChangeTracker.Entries()
-        .FirstOrDefault(
-            e => Equals(e.Metadata, entityType)
-                  && Equals(e.Property(nameof(SubJourney.Id)).CurrentValue, keyValue));
-    if (existingEntity == null)
-    {
-      node.Entry.State = EntityState.Added;
-    }
-    else
-    {
-      // do not add
-    }
-  }
-  else
-  {
-    node.Entry.State = EntityState.Added;
-  }
+  ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+  PreserveReferencesHandling = PreserveReferencesHandling.All,
+  TypeNameHandling = TypeNameHandling.Auto
 });
 
+context.Set<TrustFrameworkPolicy>().AddRange(deserialized!);
+
+// alternative experiment with change tracker manipulation
+// does not solve the issue
+
+//context.ChangeTracker.TrackGraph(trustFrameworkPolicy, node =>
+//{
+//  //Console.WriteLine($"***** Tracking  {node.Entry.Entity.GetType().Name}");
+//  if (node.Entry.Entity is SubJourney subJourney)
+//  {
+//    var keyValue = node.Entry.Property(nameof(SubJourney.Id)).CurrentValue;
+//    Console.WriteLine($"*** Recognized Subjourney *** {keyValue}");
+//    var entityType = node.Entry.Metadata;
+
+//    var existingEntity = node.Entry.Context.ChangeTracker.Entries()
+//        .FirstOrDefault(
+//            e => Equals(e.Metadata, entityType)
+//                  && Equals(e.Property(nameof(SubJourney.Id)).CurrentValue, keyValue));
+//    if (existingEntity == null)
+//    {
+//      node.Entry.State = EntityState.Added;
+//    }
+//    else
+//    {
+//      node.Entry.Property(nameof(SubJourney.DbKey)).CurrentValue = existingEntity.Property(nameof(SubJourney.DbKey)).CurrentValue;
+//      node.Entry.State = EntityState.Modified;
+//    }
+//  }
+//  else
+//  {
+//    node.Entry.State = EntityState.Added;
+//  }
+//});
 
 context.SaveChanges();
 
